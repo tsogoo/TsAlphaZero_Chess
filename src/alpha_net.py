@@ -9,11 +9,14 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import os
 import datetime
+import numpy as np
 
 class board_data(Dataset):
     def __init__(self, dataset): # dataset = np.array of (s, p, v)
-        self.X = dataset[:,0]
-        self.y_p, self.y_v = dataset[:,1], dataset[:,2]
+        self.X = np.array([d[0] for d in dataset])
+        # self.X = dataset[:,0]
+        #self.y_p, self.y_v = dataset[:,1], dataset[:,2]
+        self.y_p, self.y_v = np.array([d[1] for d in dataset]), np.array([d[2] for d in dataset])
     
     def __len__(self):
         return len(self.X)

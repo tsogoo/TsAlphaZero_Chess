@@ -3,28 +3,28 @@
 import numpy as np
 import itertools
 import copy
-
+import chess
 class board():
     def __init__(self):
         self.init_board = np.zeros([8,8]).astype(str)
         self.init_board[0,0] = "r"
-        self.init_board[0,1] = "n"
-        self.init_board[0,2] = "b"
-        self.init_board[0,3] = "q"
+        self.init_board[0,1] = "r"
+        # self.init_board[0,2] = "b"
+        # self.init_board[0,3] = "q"
         self.init_board[0,4] = "k"
-        self.init_board[0,5] = "b"
-        self.init_board[0,6] = "n"
-        self.init_board[0,7] = "r"
-        self.init_board[1,0:8] = "p"
-        self.init_board[7,0] = "R"
-        self.init_board[7,1] = "N"
-        self.init_board[7,2] = "B"
-        self.init_board[7,3] = "Q"
-        self.init_board[7,4] = "K"
-        self.init_board[7,5] = "B"
-        self.init_board[7,6] = "N"
+        # self.init_board[0,5] = "b"
+        # self.init_board[0,6] = "n"
+        # self.init_board[0,7] = "r"
+        # self.init_board[1,0:8] = "p"
+        # self.init_board[7,0] = "R"
+        # self.init_board[7,1] = "N"
+        # self.init_board[7,2] = "B"
+        # self.init_board[7,3] = "Q"
+        self.init_board[7,3] = "K"
+        # self.init_board[7,5] = "B"
+        self.init_board[7,6] = "R"
         self.init_board[7,7] = "R"
-        self.init_board[6,0:8] = "P"
+        # self.init_board[6,0:8] = "P"
         self.init_board[self.init_board == "0.0"] = " "
         self.move_count = 0
         self.no_progress_count = 0
@@ -430,24 +430,41 @@ class board():
     def possible_W_moves(self, threats=False):
         board_state = self.current_board
         rooks = {}; knights = {}; bishops = {}; queens = {}; pawns = {};
-        i,j = np.where(board_state=="R")
-        for rook in zip(i,j):
-            rooks[tuple(rook)] = self.move_rules_R(rook)
-        i,j = np.where(board_state=="N")
-        for knight in zip(i,j):
-            knights[tuple(knight)] = self.move_rules_N(knight)
-        i,j = np.where(board_state=="B")
-        for bishop in zip(i,j):
-            bishops[tuple(bishop)] = self.move_rules_B(bishop)
-        i,j = np.where(board_state=="Q")
+
+        opponent_king_pos = np.where(board_state == "k")
+        if opponent_king_pos[0].size > 0:  # Ensure the black king is on the board
+            opponent_king_pos = (opponent_king_pos[0][0], opponent_king_pos[1][0])
+        else:
+            opponent_king_pos = None  # Safety check in case the black king is not found
+        i, j = np.where(board_state == "R")
+        for rook in zip(i, j):
+            rooks[tuple(rook)] = [move for move in self.move_rules_R(rook) if move != opponent_king_pos]
+        
+        # Generate knight moves and filter out moves to the black king's position
+        i, j = np.where(board_state == "N")
+        for knight in zip(i, j):
+            knights[tuple(knight)] = [move for move in self.move_rules_N(knight) if move != opponent_king_pos]
+        
+        # Generate bishop moves and filter out moves to the black king's position
+        i, j = np.where(board_state == "B")
+        for bishop in zip(i, j):
+            bishops[tuple(bishop)] = [move for move in self.move_rules_B(bishop) if move != opponent_king_pos]
+        
+        # Generate queen moves and filter out moves to the black king's position
+        i, j = np.where(board_state == "Q")
+        for queen in zip(i, j):
+            queens[tuple(queen)] = [move for move in self.move_rules_Q(queen) if move != opponent_king_pos]
+    
         for queen in zip(i,j):
             queens[tuple(queen)] = self.move_rules_Q(queen)
         i,j = np.where(board_state=="P")
         for pawn in zip(i,j):
             if threats==False:
                 pawns[tuple(pawn)],_ = self.move_rules_P(pawn)
+                pawns[tuple(pawn)] = [move for move in pawn_moves if move != opponent_king_pos]
             else:
                 _,pawns[tuple(pawn)] = self.move_rules_P(pawn)
+                pawns[tuple(pawn)] = [move for move in pawn_threats if move != opponent_king_pos]
         c_dict = {"R": rooks, "N": knights, "B": bishops, "Q": queens, "P": pawns}
         c_list = []
         c_list.extend(list(itertools.chain(*list(rooks.values())))); c_list.extend(list(itertools.chain(*list(knights.values())))); 
@@ -474,24 +491,40 @@ class board():
     def possible_B_moves(self,threats=False):
         rooks = {}; knights = {}; bishops = {}; queens = {}; pawns = {};
         board_state = self.current_board
-        i,j = np.where(board_state=="r")
-        for rook in zip(i,j):
-            rooks[tuple(rook)] = self.move_rules_r(rook)
-        i,j = np.where(board_state=="n")
-        for knight in zip(i,j):
-            knights[tuple(knight)] = self.move_rules_n(knight)
-        i,j = np.where(board_state=="b")
-        for bishop in zip(i,j):
-            bishops[tuple(bishop)] = self.move_rules_b(bishop)
-        i,j = np.where(board_state=="q")
+        opponent_king_pos = np.where(board_state == "K")
+        if opponent_king_pos[0].size > 0:  # Ensure the black king is on the board
+            opponent_king_pos = (opponent_king_pos[0][0], opponent_king_pos[1][0])
+        else:
+            opponent_king_pos = None  # Safety check in case the black king is not found
+        i, j = np.where(board_state == "r")
+        for rook in zip(i, j):
+            rooks[tuple(rook)] = [move for move in self.move_rules_R(rook) if move != opponent_king_pos]
+        
+        # Generate knight moves and filter out moves to the black king's position
+        i, j = np.where(board_state == "n")
+        for knight in zip(i, j):
+            knights[tuple(knight)] = [move for move in self.move_rules_N(knight) if move != opponent_king_pos]
+        
+        # Generate bishop moves and filter out moves to the black king's position
+        i, j = np.where(board_state == "b")
+        for bishop in zip(i, j):
+            bishops[tuple(bishop)] = [move for move in self.move_rules_B(bishop) if move != opponent_king_pos]
+        
+        # Generate queen moves and filter out moves to the black king's position
+        i, j = np.where(board_state == "q")
+        for queen in zip(i, j):
+            queens[tuple(queen)] = [move for move in self.move_rules_Q(queen) if move != opponent_king_pos]
+    
         for queen in zip(i,j):
-            queens[tuple(queen)] = self.move_rules_q(queen)
+            queens[tuple(queen)] = self.move_rules_Q(queen)
         i,j = np.where(board_state=="p")
         for pawn in zip(i,j):
             if threats==False:
-                pawns[tuple(pawn)],_ = self.move_rules_p(pawn)
+                pawns[tuple(pawn)],_ = self.move_rules_P(pawn)
+                pawns[tuple(pawn)] = [move for move in pawn_moves if move != opponent_king_pos]
             else:
-                _,pawns[tuple(pawn)] = self.move_rules_p(pawn)
+                _,pawns[tuple(pawn)] = self.move_rules_P(pawn)
+                pawns[tuple(pawn)] = [move for move in pawn_threats if move != opponent_king_pos]
         c_dict = {"r": rooks, "n": knights, "b": bishops, "q": queens, "p": pawns}
         c_list = []
         c_list.extend(list(itertools.chain(*list(rooks.values())))); c_list.extend(list(itertools.chain(*list(knights.values())))); 
@@ -609,21 +642,14 @@ class board():
     
     ## Check if current player's king is in check
     def check_status(self):
-        if self.player == 0:
-            c_list,_ = self.possible_B_moves(threats=True)
-            king_position = np.where(self.current_board=="K")
-            i, j = king_position
-            if (i,j) in c_list:
-                return True
-        elif self.player == 1:
-            c_list,_ = self.possible_W_moves(threats=True)
-            king_position = np.where(self.current_board=="k")
-            i, j = king_position
-            if (i,j) in c_list:
-                return True
+        board = self.convert_current_board_to_chess_board()
+        if board.is_check():
+            return True
         return False
+       
     
     def in_check_possible_moves(self):
+        return self.actions()
         self.copy_board = copy.deepcopy(self.current_board); self.move_count_copy = self.move_count # backup board state
         self.en_passant_copy = copy.deepcopy(self.en_passant); self.r1_move_count_copy = copy.deepcopy(self.r1_move_count); 
         self.r2_move_count_copy = copy.deepcopy(self.r2_move_count); self.en_passant_move_copy = copy.deepcopy(self.en_passant_move)
@@ -667,48 +693,89 @@ class board():
                         self.k_move_count = copy.deepcopy(self.k_move_count_copy); self.move_count = self.move_count_copy
             return possible_moves
     
+    # convert current board to python-chess board
+    def convert_current_board_to_chess_board(self):
+        board = chess.Board()
+        if self.player:
+            board.turn = chess.BLACK
+        else:
+            board.turn = chess.WHITE
+        # if self.en_passant != None:
+        #     board.ep_square = chess.square(self.en_passant,0) if self.player == 0 else chess.square(self.en_passant,5)
+        castling_fen = ""
+        if self.K_move_count == 0:
+            if self.R1_move_count == 0:
+                if self.R2_move_count == 0:
+                    castling_fen += "QK"
+                else:
+                    castling_fen += "Q"
+            else:
+                if self.R2_move_count == 0:
+                    castling_fen += "K"
+        if self.k_move_count == 0:
+            if self.r1_move_count == 0:
+                if self.r2_move_count == 0:
+                    castling_fen += "qk"
+                else:
+                    castling_fen += "q"
+            else:
+                if self.r2_move_count == 0:
+                    castling_fen += "k"
+        if castling_fen == "":
+            castling_fen = "-"
+        # board.set_castling_fen(castling_fen)
+            
+        for i in range(8):
+            for j in range(8):
+                if self.current_board[i,j] == "P":
+                    board.set_piece_at(chess.square(j,7-i),chess.Piece(chess.PAWN,chess.WHITE))
+                elif self.current_board[i,j] == "R":
+                    board.set_piece_at(chess.square(j,7-i),chess.Piece(chess.ROOK,chess.WHITE))
+                elif self.current_board[i,j] == "N":
+                    board.set_piece_at(chess.square(j,7-i),chess.Piece(chess.KNIGHT,chess.WHITE))
+                elif self.current_board[i,j] == "B":
+                    board.set_piece_at(chess.square(j,7-i),chess.Piece(chess.BISHOP,chess.WHITE))
+                elif self.current_board[i,j] == "Q":
+                    board.set_piece_at(chess.square(j,7-i),chess.Piece(chess.QUEEN,chess.WHITE))
+                elif self.current_board[i,j] == "K":
+                    board.set_piece_at(chess.square(j,7-i),chess.Piece(chess.KING,chess.WHITE))
+                elif self.current_board[i,j] == "p":
+                    board.set_piece_at(chess.square(j,7-i),chess.Piece(chess.PAWN,chess.BLACK))
+                elif self.current_board[i,j] == "r":
+                    board.set_piece_at(chess.square(j,7-i),chess.Piece(chess.ROOK,chess.BLACK))
+                elif self.current_board[i,j] == "n":
+                    board.set_piece_at(chess.square(j,7-i),chess.Piece(chess.KNIGHT,chess.BLACK))
+                elif self.current_board[i,j] == "b":
+                    board.set_piece_at(chess.square(j,7-i),chess.Piece(chess.BISHOP,chess.BLACK))
+                elif self.current_board[i,j] == "q":
+                    board.set_piece_at(chess.square(j,7-i),chess.Piece(chess.QUEEN,chess.BLACK))
+                elif self.current_board[i,j] == "k":
+                    board.set_piece_at(chess.square(j,7-i),chess.Piece(chess.KING,chess.BLACK))
+                else:
+                    board.set_piece_at(chess.square(j,7-i),None)
+        return board
+
+    def is_adjacent(self, pos1, pos2):
+        row_diff = abs(pos1[0] - pos2[0])
+        col_diff = abs(pos1[1] - pos2[1])
+        return row_diff <= 1 and col_diff <= 1
+
+    def convert_chess_move_to_action(self, move):
+        promotion = None
+        if move.promotion:
+            if move.promotion == 5:
+                promotion = "queen"
+            elif move.promotion == 4:
+                promotion = "rook"
+            elif move.promotion == 3:
+                promotion = "bishop"
+            elif move.promotion == 2:
+                promotion = "knight"        
+        return (7 - move.from_square // 8, move.from_square % 8), (7 - move.to_square // 8, move.to_square % 8), promotion
+
     def actions(self): # returns all possible actions while not in check: initial_pos,final_pos,underpromote
+        board = self.convert_current_board_to_chess_board()
         acts = []
-        if self.player == 0:
-            _,c_dict = self.possible_W_moves() # all non-king moves except castling
-            current_position = np.where(self.current_board=="K")
-            i, j = current_position; i,j = i[0],j[0]
-            c_dict["K"] = {(i,j):self.move_rules_K()} # all king moves
-            for key in c_dict.keys():
-                for initial_pos in c_dict[key].keys():
-                    for final_pos in c_dict[key][initial_pos]:
-                        if key in ["P","p"] and final_pos[0] in [0,7]:
-                            for p in ["queen","rook","knight","bishop"]:
-                                acts.append([initial_pos,final_pos,p])
-                        else:
-                            acts.append([initial_pos,final_pos,None])
-            actss = []
-            for act in acts:  ## after move, check that its not check ownself, else illegal move
-                i,f,p = act; b = copy.deepcopy(self)
-                b.move_piece(i,f,p)
-                b.player = 0
-                if b.check_status() == False:
-                    actss.append(act)
-            return actss
-        if self.player == 1:
-            _,c_dict = self.possible_B_moves() # all non-king moves except castling
-            current_position = np.where(self.current_board=="k")
-            i, j = current_position; i,j = i[0],j[0]
-            c_dict["k"] = {(i,j):self.move_rules_k()} # all king moves
-            for key in c_dict.keys():
-                for initial_pos in c_dict[key].keys():
-                    for final_pos in c_dict[key][initial_pos]:
-                        if key in ["P","p"] and final_pos[0] in [0,7]:
-                            for p in ["queen","rook","knight","bishop"]:
-                                acts.append([initial_pos,final_pos,p])
-                        else:
-                            acts.append([initial_pos,final_pos,None])
-            actss = []
-            for act in acts:  ## after move, check that its not check ownself, else illegal move
-                i,f,p = act; b = copy.deepcopy(self)
-                b.move_piece(i,f,p)
-                b.player = 1
-                if b.check_status() == False:
-                    actss.append(act)
-            return actss
-        
+        for move in board.legal_moves:
+            acts.append(self.convert_chess_move_to_action(move))
+        return acts

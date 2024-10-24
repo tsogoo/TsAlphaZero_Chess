@@ -254,3 +254,26 @@ def decode_action(board,encoded):
                 promoted = "q"
         i_pos.append(initial_pos); f_pos.append(final_pos), prom.append(promoted)
     return i_pos, f_pos, prom
+
+
+# convert move like a7a8q or a2a4 to encoded integer
+def encode_move(board, move):
+    if len(move) < 5:
+        encoded = encode_action(board,(int(move[1])-1,ord(move[0])-97),(int(move[3])-1,ord(move[2])-97))
+    else:
+        encoded = encode_action(board,(int(move[1])-1,ord(move[0])-97),(int(move[3])-1,ord(move[2])-97),move[4])
+    return encoded
+
+
+# convert encoded integer to move like a7a8q or a2a4
+def decode_move(board, encoded):
+    i_pos, f_pos, prom = decode_action(board,encoded)
+    i,j = i_pos[0]; x,y = f_pos[0]
+    if prom[0] == None:
+        move = chr(j+97) + str(i+1) + chr(y+97) + str(x+1)
+    else:
+        move = chr(j+97) + str(i+1) + chr(y+97) + str(x+1) + prom[0]
+    return move
+
+    
+    

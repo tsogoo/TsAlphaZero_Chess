@@ -11,7 +11,7 @@ import torch.multiprocessing as mp
 if __name__=="__main__":
     for iteration in range(10):
         # Runs MCTS
-        net_to_play="current_net_trained8_iter1.pth.tar"
+        net_to_play="trained1_iter7.pth.tar"
         mp.set_start_method("spawn",force=True)
         net = ChessNet()
         cuda = torch.cuda.is_available()
@@ -26,14 +26,15 @@ if __name__=="__main__":
         net.load_state_dict(checkpoint['state_dict'])
         processes1 = []
         for i in range(6):
-            p1 = mp.Process(target=MCTS_self_play,args=(net,50,i))
+            p1 = mp.Process(target=MCTS_self_play,args=(net,500,i))
             p1.start()
             processes1.append(p1)
         for p1 in processes1:
             p1.join()
-            
+        exit()
+        
         # Runs Net training
-        net_to_train="current_net_trained8_iter1.pth.tar"; save_as="current_net_trained8_iter1.pth.tar"
+        net_to_train="trained1_iter4.pth.tar"; save_as="trained1_iter5.pth.tar"
         # gather data
         data_path = "./datasets/iter0/"
         datasets = []
@@ -51,7 +52,9 @@ if __name__=="__main__":
             filename = os.path.join(data_path,file)
             with open(filename, 'rb') as fo:
                 datasets.extend(pickle.load(fo, encoding='bytes'))
-        datasets = np.array(datasets)
+        
+
+        # datasets = np.array(datasets)
         
         mp.set_start_method("spawn",force=True)
         net = ChessNet()

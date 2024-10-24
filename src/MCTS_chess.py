@@ -2,6 +2,7 @@
 import pickle
 import os
 import collections
+import random
 import numpy as np
 import math
 import encoder_decoder as ed
@@ -11,6 +12,24 @@ import torch
 import torch.multiprocessing as mp
 from alpha_net import ChessNet
 import datetime
+import chess
+import chess.engine
+
+
+def get_stockfish_move(game_state, game_engine, time_limit=0.1):
+    """ Use Stockfish to get the best move for the current game state """
+    board = game_state.convert_current_board_to_chess_board()
+    stockfish_move = game_engine.play(board, chess.engine.Limit(time=time_limit)).move
+    action = game_state.convert_chess_move_to_action(stockfish_move)
+    print(game_state.current_board)
+    print(action)
+    print(" ")
+    return action
+
+
+def position_int_to_tuple(position):
+    """ Convert position from integer to tuple """
+    return (position // 10, position % 10)
 
 class UCTNode():
     def __init__(self, game, move, parent=None):
@@ -133,14 +152,26 @@ class DummyNode(object):
         self.child_number_visits = collections.defaultdict(float)
 
 
-def UCT_search(game_state, num_reads,net):
+# UCT search with stockfish move and leverage stockfish move's tree policy
+def UCT_search(game_state, num_reads,net, cpu, engine=False):
     root = UCTNode(game_state, move=None, parent=DummyNode())
+    stockfish_idx = None
+    if engine and cpu % 2 == game_state.player:
+        with chess.engine.SimpleEngine.popen_uci("../engine/stockfish-ubuntu-x86-64") as eng:
+            move_from, move_to, move_promotion = get_stockfish_move(game_state, eng)
+            stockfish_idx = ed.encode_action(game_state, move_from, move_to, move_promotion)
+            eng.quit()
+
     for i in range(num_reads):
         leaf = root.select_leaf()
         encoded_s = ed.encode_board(leaf.game); encoded_s = encoded_s.transpose(2,0,1)
         encoded_s = torch.from_numpy(encoded_s).float().cuda()
         child_priors, value_estimate = net(encoded_s)
-        child_priors = child_priors.detach().cpu().numpy().reshape(-1); value_estimate = value_estimate.item()
+        child_priors = child_priors.detach().cpu().numpy().reshape(-1)
+        value_estimate = value_estimate.item()
+        if stockfish_idx != None:
+            child_priors[stockfish_idx] += 0.3
+        
         if leaf.game.check_status() == True and leaf.game.in_check_possible_moves() == []: # if checkmate
             leaf.backup(value_estimate); continue
         leaf.expand(child_priors) # need to make sure valid moves
@@ -174,7 +205,7 @@ def get_policy(root):
     return policy
 
 def save_as_pickle(filename, data):
-    completeName = os.path.join("./datasets/iter2/",\
+    completeName = os.path.join("./datasets/iter8/",\
                                 filename)
     with open(completeName, 'wb') as output:
         pickle.dump(data, output)
@@ -188,13 +219,14 @@ def load_pickle(filename):
 
 
 def MCTS_self_play(chessnet,num_games,cpu):
+
     for idxx in range(0,num_games):
         current_board = c_board()
         checkmate = False
         dataset = [] # to get state, policy, value for neural network training
         states = []
         value = 0
-        while checkmate == False and current_board.move_count <= 100:
+        while checkmate == False and current_board.move_count <= 40:
             draw_counter = 0
             for s in states:
                 if np.array_equal(current_board.current_board,s):
@@ -203,7 +235,10 @@ def MCTS_self_play(chessnet,num_games,cpu):
                 break
             states.append(copy.deepcopy(current_board.current_board))
             board_state = copy.deepcopy(ed.encode_board(current_board))
-            best_move, root = UCT_search(current_board,777,chessnet)
+            if True: # random.randint(0, 1) == 0:
+                best_move, root = UCT_search(current_board,777,chessnet, cpu, True)
+            else:
+                best_move, root = UCT_search(current_board,777,chessnet, cpu, False)
             current_board = do_decode_n_move_pieces(current_board,best_move) # decode move and move piece(s)
             policy = get_policy(root)
             dataset.append([board_state,policy])
@@ -229,7 +264,7 @@ def MCTS_self_play(chessnet,num_games,cpu):
     
 if __name__=="__main__":
     
-    net_to_play="current_net_trained8_iter1.pth.tar"
+    net_to_play="current_net1.pth.tar"
     mp.set_start_method("spawn",force=True)
     net = ChessNet()
     cuda = torch.cuda.is_available()
@@ -237,9 +272,8 @@ if __name__=="__main__":
         net.cuda()
     net.share_memory()
     net.eval()
-    print("hi")
-    #torch.save({'state_dict': net.state_dict()}, os.path.join("./model_data/",\
-    #                                "current_net.pth.tar"))
+    torch.save({'state_dict': net.state_dict()}, os.path.join("./model_data/",\
+                                   "current_net1.pth.tar"))
     
     current_net_filename = os.path.join("./model_data/",\
                                     net_to_play)
