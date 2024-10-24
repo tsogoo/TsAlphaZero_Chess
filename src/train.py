@@ -8,11 +8,11 @@ import torch
 
 
 def train_chessnet(
-    net_to_train="initial_model.pth.tar", save_as="trained1_iter7.pth.tar"
+    net_to_train="initial_model.pth.tar", save_as="trained.pth.tar"
 ):
     # gather data
 
-    for i in ["iter0", "iter1", "iter2"]:
+    for i in ["iter0", "iter5", "iter6", "iter7", "iter8", "iter9"]:
         data_path = f"./datasets/{i}/"
         datasets = []
         for idx, file in enumerate(os.listdir(data_path)):
@@ -32,7 +32,7 @@ def train_chessnet(
             checkpoint = torch.load(current_net_filename)
             net.load_state_dict(checkpoint["state_dict"])
             print("Loaded model")
-        train(net, datasets)
+        train(net, datasets, 0, 100)
     # save results
     torch.save({"state_dict": net.state_dict()}, os.path.join("./model_data/", save_as))
 
@@ -40,4 +40,5 @@ def train_chessnet(
 if __name__ == "__main__":
     # create initial model
     # train_chessnet(net_to_train="", save_as="initial_model.pth.tar")
-    train_chessnet(net_to_train="initial_model.pth", save_as="trained_model_1.pth.tar")
+    # load and train
+    train_chessnet(net_to_train="trained_model1.pth.tar", save_as="trained_model_2.pth.tar")

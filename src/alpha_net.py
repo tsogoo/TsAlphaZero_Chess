@@ -107,7 +107,8 @@ class AlphaLoss(torch.nn.Module):
                                 (1e-6 + y_policy.float()).float().log()), 1)
         total_error = (value_error.view(-1).float() + policy_error).mean()
         return total_error
-    
+
+
 def train(net, dataset, epoch_start=0, epoch_stop=20, cpu=0):
     torch.manual_seed(cpu)
     cuda = torch.cuda.is_available()
@@ -123,7 +124,7 @@ def train(net, dataset, epoch_start=0, epoch_stop=20, cpu=0):
         scheduler.step()
         total_loss = 0.0
         losses_per_batch = []
-        for i,data in enumerate(train_loader,0):
+        for i, data in enumerate(train_loader, 0):
             state, policy, value = data
             if cuda:
                 state, policy, value = state.cuda().float(), policy.float().cuda(), value.cuda().float()
@@ -135,22 +136,26 @@ def train(net, dataset, epoch_start=0, epoch_stop=20, cpu=0):
             total_loss += loss.item()
             if i % 10 == 9:    # print every 10 mini-batches of size = batch_size
                 print('Process ID: %d [Epoch: %d, %5d/ %d points] total loss per batch: %.3f' %
-                      (os.getpid(), epoch + 1, (i + 1)*30, len(train_set), total_loss/10))
-                print("Policy:",policy[0].argmax().item(),policy_pred[0].argmax().item())
-                print("Value:",value[0].item(),value_pred[0,0].item())
-                losses_per_batch.append(total_loss/10)
+                      (os.getpid(), epoch + 1, (i + 1) * 30, len(train_set), total_loss / 10))
+                print("Policy:", policy[0].argmax().item(), policy_pred[0].argmax().item())
+                print("Value:", value[0].item(), value_pred[0,0].item())
+                losses_per_batch.append(total_loss / 10)
                 total_loss = 0.0
-        losses_per_epoch.append(sum(losses_per_batch)/len(losses_per_batch))
+        if losses_per_batch:
+            losses_per_epoch.append(sum(losses_per_batch) / len(losses_per_batch))
         if len(losses_per_epoch) > 100:
-            if abs(sum(losses_per_epoch[-4:-1])/3-sum(losses_per_epoch[-16:-13])/3) <= 0.01:
+            if abs(sum(losses_per_epoch[-4:-1]) / 3 - sum(losses_per_epoch[-16:-13]) / 3) <= 0.01:
                 break
+        # save every 100 epochs
+        if epoch % 50 == 49:
+            torch.save({"state_dict": net.state_dict()}, os.path.join("./model_data/", "model_%s.pth" % datetime.datetime.today().strftime("%Y-%m-%d")))
+            epochs = list(range(1, len(losses_per_epoch) + 1))
 
-    fig = plt.figure()
-    ax = fig.add_subplot(222)
-    ax.scatter([e for e in range(1,epoch_stop+1,1)], losses_per_epoch)
-    ax.set_xlabel("Epoch")
-    ax.set_ylabel("Loss per batch")
-    ax.set_title("Loss vs Epoch")
-    print('Finished Training')
-    plt.savefig(os.path.join("./model_data/", "Loss_vs_Epoch_%s.png" % datetime.datetime.today().strftime("%Y-%m-%d")))
-
+            fig, ax = plt.subplots()
+            ax.scatter(epochs, losses_per_epoch)
+            ax.set_xlabel("Epoch")
+            ax.set_ylabel("Loss per batch")
+            ax.set_title("Loss vs Epoch")
+            print('Finished Training')
+            plt.savefig(os.path.join("./model_data/", "Loss_vs_Epoch_%s.png" % datetime.datetime.today().strftime("%Y-%m-%d-%H-%M-%S")))
+    
