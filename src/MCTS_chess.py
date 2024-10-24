@@ -19,7 +19,7 @@ import chess.engine
 def get_stockfish_move(node, game_engine, time_limit=0.1):
     """Use Stockfish to get the best move for the current game state"""
     stockfish_move = game_engine.play(
-        node.board, chess.engine.Limit(time=time_limit)
+        node.game.board, chess.engine.Limit(time=time_limit)
     ).move
     action = node.game.convert_chess_move_to_action(stockfish_move)
     print(node.game.current_board)
@@ -36,7 +36,7 @@ def position_int_to_tuple(position):
 class UCTNode:
     def __init__(self, game, move, parent=None):
         self.game = game  # state s
-        self.board = game.convert_current_board_to_chess_board()
+        game.convert_current_board_to_chess_board()
         self.move = move  # action index
         self.is_expanded = False
         self.parent = parent
@@ -94,6 +94,9 @@ class UCTNode:
         )
         child_priors[action_idxs] = valid_child_priors
         return child_priors
+
+    def check_status(self):
+        return
 
     def expand(self, child_priors):
         self.is_expanded = True
