@@ -16,12 +16,13 @@ import chess
 import chess.engine
 
 
-def get_stockfish_move(game_state, game_engine, time_limit=0.1):
+def get_stockfish_move(node, game_engine, time_limit=0.1):
     """Use Stockfish to get the best move for the current game state"""
-    board = game_state.convert_current_board_to_chess_board()
-    stockfish_move = game_engine.play(board, chess.engine.Limit(time=time_limit)).move
-    action = game_state.convert_chess_move_to_action(stockfish_move)
-    print(game_state.current_board)
+    stockfish_move = game_engine.play(
+        node.board, chess.engine.Limit(time=time_limit)
+    ).move
+    action = node.game.convert_chess_move_to_action(stockfish_move)
+    print(node.game.current_board)
     print(action)
     print(" ")
     return action
@@ -35,6 +36,7 @@ def position_int_to_tuple(position):
 class UCTNode:
     def __init__(self, game, move, parent=None):
         self.game = game  # state s
+        self.board = game.convert_current_board_to_chess_board()
         self.move = move  # action index
         self.is_expanded = False
         self.parent = parent
@@ -172,7 +174,7 @@ def UCT_search(game_state, num_reads, net, cpu, engine=None):
     stockfish_idx = None
     if engine and cpu % 2 == game_state.player:
 
-        move_from, move_to, move_promotion = get_stockfish_move(game_state, engine)
+        move_from, move_to, move_promotion = get_stockfish_move(root, engine)
         stockfish_idx = ed.encode_action(game_state, move_from, move_to, move_promotion)
 
     for i in range(num_reads):
